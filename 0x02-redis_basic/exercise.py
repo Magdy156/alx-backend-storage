@@ -22,6 +22,23 @@ def count_calls(method: Callable) -> Callable:
     return wrapper
 
 
+def call_history(method: Callable) -> Callable:
+    """
+    track args
+    """
+    @wraps(method)
+    def wrapper(self: Any, *args) -> str:
+        """
+        Wraps called method and tracks its passed argument by storing
+        them to redis
+        """
+        self._redis.rpush(f'{method.__qualname__}:inputs', str(args))
+        output = method(self, *args)
+        self._redis.rpush(f'{method.__qualname__}:outputs', output)
+        return output
+    return wrapper
+
+
 class Cache:
     """
     Caching class
@@ -34,6 +51,7 @@ class Cache:
         self._redis.flushdb()
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes,  int,  float]) -> str:
         """
         Stores data in redis with randomly generated key
