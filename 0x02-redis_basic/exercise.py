@@ -4,7 +4,7 @@ Redis client module
 """
 import redis
 from uuid import uuid4
-from typing import Union
+from typing import Union, Callable, Optional, Any
 
 
 class Cache:
@@ -26,3 +26,32 @@ class Cache:
         client = self._redis
         client.set(key, data)
         return key
+
+    def get(self, key: str, fn: Optional[Callable] = None) -> Any:
+        """
+        Gets key's value from redis and converts
+        the returned  value into correct data type
+        """
+        client = self._redis
+        value = client.get(key)
+        if not value:
+            return
+        if fn is int:
+            return self.get_int(value)
+        if fn is str:
+            return self.get_str(value)
+        if callable(fn):
+            return fn(value)
+        return value
+
+    def get_str(self, data: bytes) -> str:
+        """
+        Converts to string
+        """
+        return data.decode('utf-8')
+
+    def get_int(self, data: bytes) -> int:
+        """
+        Converts to integer
+        """
+        return int(data)
